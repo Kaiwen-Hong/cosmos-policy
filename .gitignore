@@ -1,2 +1,28 @@
 /.cuda-name
 /build
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+*.egg
+
+# Downloaded datasets (large)
+ALOHA-Cosmos-Policy/
+LIBERO-Cosmos-Policy/
+RoboCasa-Cosmos-Policy/
+
+# Generated images
+future_image.png
+future_wrist_image.png
+
+# Training outputs
+checkpoints/
+logs/
+wandb/
+
+# Misc
+*.pt
+*.ckpt
+.env
