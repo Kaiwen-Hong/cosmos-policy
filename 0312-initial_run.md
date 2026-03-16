@@ -58,14 +58,33 @@ uv run --extra cu128 --group aloha --python 3.10 python -c "from huggingface_hub
 
 ```bash
 export BASE_DATASETS_DIR=$(pwd)
+export IMAGINAIRE_OUTPUT_ROOT=/workspace/training_output
+export WANDB_API_KEY=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
+export WANDB_PROJECT=cosmos-policy-v0 
 
 uv run --extra cu128 --group aloha --python 3.10 \
   torchrun --nproc_per_node=8 --master_port=12341 -m cosmos_policy.scripts.train \
   --config=cosmos_policy/config/config.py -- \
-  experiment="cosmos_predict2_2b_480p_aloha_185_demos_4_tasks_mixture_foldshirt15_candiesinbowl45_candyinbag45_eggplantchickenonplate80"
+  experiment="cosmos_predict2_2b_480p_aloha_185_demos_4_tasks_mixture_foldshirt15_candiesinbowl45_candyinbag45_eggplantchickenonplate80" \
+  2>&1 | tee /workspace/training_output/training.log
 ```
 
+**Wandb & logging**: The experiment config enables `wandb` and `wandb_callback_actions` callbacks.
+Without a valid API key, wandb will block all 8 torchrun workers waiting for interactive login.
+- To enable (recommended): `export WANDB_API_KEY=<your-key>` (get it from https://wandb.ai/authorize)
+- To disable: `export WANDB_MODE=disabled`
+- **Important**: `stdout.log` is NOT created in the open-source version (gated behind `COSMOS_INTERNAL` flag).
+  The detailed loss metrics (action L1, value loss, etc.) are only persisted via wandb.
+  The `basic` callback prints `Iteration: N, average iter time: xx, total loss xx` to terminal every 5 steps,
+  but this is lost if the terminal closes. Always use `| tee` to capture terminal output to a file.
+
 Notes:
+- **Training logs & checkpoints** are saved to `$IMAGINAIRE_OUTPUT_ROOT/{project}/{group}/{name}/`:
+  - `checkpoints/` — model checkpoints (saved every 1000 steps)
+  - `config.yaml` — saved config
+  - `job_env.yaml`, `launch_info.yaml` — reproducibility info
+  - Default output root is `/tmp/imaginaire4-output` (lost when container stops!), so we set `IMAGINAIRE_OUTPUT_ROOT=/workspace/training_output` to persist to the mounted volume
+  - `stdout.log` is NOT auto-created (see above); use `| tee` to save terminal output
 - Effective batch size = 25 (local) x 8 (GPUs) = 200 (no grad accum needed; 8xH100 is sufficient for ALOHA)
 - Train until action L1 loss reaches ~0.010; evaluate the 50K step checkpoint
 - LR schedule: warmup 2K steps, decay at 20K steps, then 5x lower constant LR

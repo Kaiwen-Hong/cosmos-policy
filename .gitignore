@@ -18,6 +18,7 @@ future_image.png
 future_wrist_image.png
 
 # Training outputs
+training_output/
 checkpoints/
 logs/
 wandb/
